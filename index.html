@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>מדבקת מדריך גלישה חיצוני</title>
+<title>מדבקת מאמן גלישה מורשה</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@700;800;900&display=swap">
 <style>
   /* Layout: black-and-white sticker, 80x50 mm. Black band with the role, big name, thick rule, fixed park logo. */
@@ -26,7 +26,7 @@
 </head>
 <body>
 <main class="app">
-  <h1>מדבקת מדריך גלישה חיצוני · 8×5 ס״מ · שחור-לבן</h1>
+  <h1>מדבקת מאמן גלישה מורשה · 8×5 ס״מ · שחור-לבן</h1>
 
   <section class="stage">
     <div id="preview" aria-label="תצוגה מקדימה של המדבקה"></div>
@@ -34,13 +34,13 @@
   </section>
 
   <section class="controls">
-    <label class="wide">שם המדריך
+    <label class="wide">שם המאמן
       <input id="name" type="text" value="עידו כהן" maxlength="24" autocomplete="off">
     </label>
     <label class="wide">תפקיד
       <select id="role">
-        <option value="m">מדריך גלישה חיצוני</option>
-        <option value="f">מדריכת גלישה חיצונית</option>
+        <option value="m">מאמן גלישה מורשה</option>
+        <option value="f">מאמנת גלישה מורשית</option>
       </select>
     </label>
     <label>תאריך הנפקה
@@ -108,8 +108,8 @@
 
   function current() {
     return {
-      name: nameEl.value.trim() || 'שם המדריך',
-      roleText: roleEl.value === 'f' ? 'מדריכת גלישה חיצונית' : 'מדריך גלישה חיצוני',
+      name: nameEl.value.trim() || 'שם המאמן',
+      roleText: roleEl.value === 'f' ? 'מאמנת גלישה מורשית' : 'מאמן גלישה מורשה',
       issued: fmtDate(issuedEl.value),
       expires: fmtDate(expiresEl.value)
     };
