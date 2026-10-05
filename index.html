@@ -35,6 +35,12 @@
   </section>
 
   <section class="controls">
+    <label class="wide">שם
+      <select id="nameMode">
+        <option value="print">מודפס על המדבקה</option>
+        <option value="manual">מילוי ידני בטוש (קו ריק)</option>
+      </select>
+    </label>
     <label class="wide">שם המאמן
       <input id="name" type="text" value="עידו כהן" maxlength="24" autocomplete="off">
     </label>
@@ -57,7 +63,7 @@
       <input id="expires" type="date">
     </label>
     <button id="pngBtn" type="button" class="wide">הורדת PNG</button>
-    <p class="hint wide">הקובץ נשמר כ-PNG בשחור-לבן, ברזולוציה 1890×1181 פיקסלים (600 DPI ל-80×50 מ״מ), מוכן לשליחה למכשיר המדבקות. ניתן לשנות את השם, התפקיד והתאריכים, או להשאיר קווים ריקים למילוי ידני בטוש אחרי ההדפסה.</p>
+    <p class="hint wide">הקובץ נשמר כ-PNG בשחור-לבן, ברזולוציה 1890×1181 פיקסלים (600 DPI ל-80×50 מ״מ), מוכן לשליחה למכשיר המדבקות. ניתן לשנות את השם, התפקיד והתאריכים, או להשאיר את השם ו/או התאריכים ריקים למילוי ידני בטוש אחרי ההדפסה.</p>
   </section>
 </main>
 
@@ -86,7 +92,8 @@
       '<rect x="1.2" y="1.2" width="77.6" height="12.6" fill="#000"/>' +
       '<rect x="1.2" y="1.2" width="77.6" height="47.6" fill="none" stroke="#000" stroke-width="0.9"/>' +
       '<text x="40" y="10.4" text-anchor="middle" direction="rtl" font-family="' + FONT + '" font-weight="800" font-size="7" fill="#fff">' + esc(roleText) + '</text>' +
-      '<text class="nm" x="40" y="28.4" text-anchor="middle" direction="rtl" font-family="' + FONT + '" font-weight="900" font-size="' + nameSize + '" fill="#000">' + esc(name) + '</text>' +
+      // An empty name (manual mode) leaves the space above the rule blank to write on.
+      (name ? '<text class="nm" x="40" y="28.4" text-anchor="middle" direction="rtl" font-family="' + FONT + '" font-weight="900" font-size="' + nameSize + '" fill="#000">' + esc(name) + '</text>' : '') +
       '<rect x="8" y="32.2" width="64" height="0.9" fill="#000"/>' +
       '<image x="' + LOGO_BOX.x + '" y="' + LOGO_BOX.y + '" width="' + LOGO_BOX.w + '" height="' + LOGO_BOX.h + '" preserveAspectRatio="xMidYMid meet" href="' + LOGO + '"/>' +
       bottom +
@@ -94,6 +101,7 @@
   }
 
   var nameEl = document.getElementById('name');
+  var nameModeEl = document.getElementById('nameMode');
   var roleEl = document.getElementById('role');
   var issuedEl = document.getElementById('issued');
   var expiresEl = document.getElementById('expires');
@@ -117,7 +125,7 @@
 
   function current() {
     return {
-      name: nameEl.value.trim() || 'שם המאמן',
+      name: nameModeEl.value === 'manual' ? '' : (nameEl.value.trim() || 'שם המאמן'),
       roleText: roleEl.value === 'f' ? 'מאמנת גלישה מורשית' : 'מאמן גלישה מורשה',
       dates: {
         manual: dateModeEl.value === 'manual',
@@ -129,11 +137,14 @@
   function render() {
     var c = current();
     issuedEl.disabled = expiresEl.disabled = c.dates.manual;
+    nameEl.disabled = !c.name;
     previewEl.innerHTML = sticker(c.name, c.roleText, 12, c.dates);
     var t = previewEl.querySelector('.nm');
-    var w = t.getBBox().width, maxW = 68;
-    currentSize = w > maxW ? Math.max(5, 12 * maxW / w) : 12;
-    t.setAttribute('font-size', currentSize.toFixed(2));
+    if (t) {
+      var w = t.getBBox().width, maxW = 68;
+      currentSize = w > maxW ? Math.max(5, 12 * maxW / w) : 12;
+      t.setAttribute('font-size', currentSize.toFixed(2));
+    }
     var dt = previewEl.querySelector('.dt');
     if (dt && dt.getBBox().width > DATES.maxW) dt.setAttribute('font-size', (DATES.size * DATES.maxW / dt.getBBox().width).toFixed(2));
   }
@@ -165,13 +176,15 @@
       x.fillStyle = '#fff';
       x.font = '800 ' + (7 * S) + 'px ' + FONT;
       x.fillText(roleText, 40 * S, 10.4 * S);
-      var size = 12;
-      x.font = '900 ' + (size * S) + 'px ' + FONT;
-      var w = x.measureText(name).width / S;
-      if (w > 68) size = Math.max(5, 12 * 68 / w);
-      x.font = '900 ' + (size * S) + 'px ' + FONT;
       x.fillStyle = '#000';
-      x.fillText(name, 40 * S, 28.4 * S);
+      if (name) {
+        var size = 12;
+        x.font = '900 ' + (size * S) + 'px ' + FONT;
+        var w = x.measureText(name).width / S;
+        if (w > 68) size = Math.max(5, 12 * 68 / w);
+        x.font = '900 ' + (size * S) + 'px ' + FONT;
+        x.fillText(name, 40 * S, 28.4 * S);
+      }
       x.fillRect(8 * S, 32.2 * S, 64 * S, 0.9 * S);
       var B = LOGO_BOX, k = Math.min(B.w / logo.width, B.h / logo.height);
       var lw = logo.width * k, lh = logo.height * k;
@@ -204,7 +217,7 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'sticker-' + c.name.replace(/[^A-Za-z0-9֐-׿-]+/g, '_') + '.png';
+      a.download = 'sticker-' + (c.name || 'blank').replace(/[^A-Za-z0-9֐-׿-]+/g, '_') + '.png';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
     }).catch(function () {
@@ -213,6 +226,7 @@
   }
 
   nameEl.addEventListener('input', render);
+  nameModeEl.addEventListener('change', render);
   roleEl.addEventListener('change', render);
   issuedEl.addEventListener('input', function () { expiresEl.min = issuedEl.value; render(); });
   expiresEl.addEventListener('input', render);
