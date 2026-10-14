@@ -52,10 +52,13 @@
       <select id="preset"></select>
     </label>
     <label>רוחב (ס״מ)
-      <input id="widthCm" type="number" min="3" max="20" step="0.1" value="8" inputmode="decimal">
+      <input id="widthCm" type="number" min="3" max="20" step="0.1" value="10.5" inputmode="decimal">
     </label>
     <label>גובה (ס״מ)
-      <input id="heightCm" type="number" min="3" max="20" step="0.1" value="5" inputmode="decimal">
+      <input id="heightCm" type="number" min="3" max="20" step="0.1" value="7" inputmode="decimal">
+    </label>
+    <label class="wide">שוליים פנימיים לגרפיקה (מ״מ)
+      <input id="marginMm" type="number" min="0" max="15" step="0.5" value="4">
     </label>
     <label class="wide">שם
       <select id="nameMode">
@@ -103,7 +106,7 @@
     </label>
     <button id="printBtn" type="button">הדפסה על דף A4</button>
     <button id="testBtn" type="button" style="background: #fff; color: var(--ink);">הדפסת דף בדיקה (מסגרות בלבד)</button>
-    <p class="hint wide">הקובץ נשמר כ-PNG בשחור-לבן ב-600 DPI (<span id="pngInfo"></span>), מוכן לשליחה למכשיר המדבקות. ניתן לשנות את הגודל, השם, התפקיד והתאריכים, או להשאיר את השם ו/או התאריכים ריקים למילוי ידני בטוש אחרי ההדפסה.</p>
+    <p class="hint wide">הקובץ נשמר כ-PNG בשחור-לבן ב-600 DPI (<span id="pngInfo"></span>), מוכן לשליחה למכשיר המדבקות. ״שוליים פנימיים״ מכווצים את הגרפיקה בתוך המדבקה כך שהזזה קטנה של המדפסת לא תחתוך את המסגרת. ניתן לשנות את הגודל, השם, התפקיד והתאריכים, או להשאיר את השם ו/או התאריכים ריקים למילוי ידני בטוש אחרי ההדפסה.</p>
     <p class="hint wide">בהדפסה על A4 כל מדבקה נשארת בדיוק בגודל שנבחר (<span id="sheetInfo"></span>). בחלון ההדפסה יש לבחור קנה מידה 100% / ״גודל בפועל״ ולא ״התאם לדף״, ושוליים ״ללא״.</p>
     <p class="hint wide">דפי מדבקות חתוכים מראש: בחרו את הדף ברשימה, הדפיסו ״דף בדיקה״ על נייר רגיל, הניחו אותו על דף המדבקות מול האור, ותקנו בשדות הכיול אם המסגרות זזות. הכיול נשמר בדפדפן. ״התחלה ממדבקה מס׳״ מאפשר להשתמש בדף שחלקו כבר נוצל (הספירה מימין למעלה, שורה אחר שורה).</p>
   </section>
@@ -157,14 +160,17 @@
 
   function n2(v) { return +v.toFixed(3); }
 
-  function stickerSvg(c, W, H) {
-    var body = stickerItems(c, W, H).map(function (it) {
+  // The label is c.W x c.H mm; the graphics are drawn c.M mm inside every edge, so a slightly misaligned
+  // print or a printer's unprintable page edge doesn't cut off the border.
+  function stickerSvg(c) {
+    var body = stickerItems(c, c.W - 2 * c.M, c.H - 2 * c.M).map(function (it) {
       if (it.t === 'rect') return '<rect x="' + n2(it.x) + '" y="' + n2(it.y) + '" width="' + n2(it.w) + '" height="' + n2(it.h) + '" fill="' + it.fill + '"/>';
       if (it.t === 'frame') return '<rect x="' + n2(it.x) + '" y="' + n2(it.y) + '" width="' + n2(it.w) + '" height="' + n2(it.h) + '" fill="none" stroke="#000" stroke-width="' + n2(it.lw) + '"/>';
       if (it.t === 'logo') return '<image x="' + n2(it.x) + '" y="' + n2(it.y) + '" width="' + n2(it.w) + '" height="' + n2(it.h) + '" preserveAspectRatio="xMidYMid meet" href="' + LOGO + '"/>';
       return '<text x="' + n2(it.x) + '" y="' + n2(it.y) + '" text-anchor="middle" direction="' + it.dir + '" font-family="' + FONT + '" font-weight="' + it.weight + '" font-size="' + n2(it.size) + '" fill="' + it.fill + '">' + esc(it.str) + '</text>';
     }).join('');
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + 'mm" height="' + H + 'mm" role="img" aria-label="' + esc(c.roleText + ' ' + c.name) + '">' + body + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + c.W + ' ' + c.H + '" width="' + c.W + 'mm" height="' + c.H + 'mm" role="img" aria-label="' + esc(c.roleText + ' ' + c.name) + '">' +
+      '<rect width="' + c.W + '" height="' + c.H + '" fill="#fff"/><g transform="translate(' + c.M + ' ' + c.M + ')">' + body + '</g></svg>';
   }
 
   var nameEl = document.getElementById('name');
@@ -181,6 +187,7 @@
   var dxEl = document.getElementById('dxMm');
   var dyEl = document.getElementById('dyMm');
   var presetEl = document.getElementById('preset');
+  var marginEl = document.getElementById('marginMm');
   var previewEl = document.getElementById('preview');
   var lastMax = 10;
 
@@ -206,6 +213,13 @@
   expiresEl.min = issuedEl.value;
 
   function current() {
+    var c = currentRaw();
+    // Inner margin, capped so the graphics keep at least 20 mm in each direction.
+    c.M = Math.max(0, Math.min(num(marginEl, 4, 0, 15), (Math.min(c.W, c.H) - 20) / 2));
+    return c;
+  }
+
+  function currentRaw() {
     return {
       name: nameModeEl.value === 'manual' ? '' : (nameEl.value.trim() || 'שם המאמן'),
       roleText: roleEl.value === 'f' ? 'מאמנת גלישה מורשית' : 'מאמן גלישה מורשה',
@@ -213,8 +227,8 @@
         manual: dateModeEl.value === 'manual',
         text: dateRange(fmtDate(issuedEl.value), fmtDate(expiresEl.value))
       },
-      W: Math.round(num(widthEl, 8, 3, 20) * 10 * 10) / 10,  // cm input -> mm, 0.1 mm precision
-      H: Math.round(num(heightEl, 5, 3, 20) * 10 * 10) / 10,
+      W: Math.round(num(widthEl, 10.5, 3, 20) * 10 * 10) / 10,  // cm input -> mm, 0.1 mm precision
+      H: Math.round(num(heightEl, 7, 3, 20) * 10 * 10) / 10,
       gap: num(gapEl, 6, 0, 20)
     };
   }
@@ -255,16 +269,23 @@
   }
 
   // Calibration and sheet choice are per printer and paper, so remember them in this browser.
-  var PREFS_KEY = 'srfsticker.sheet';
+  // v2 made the 10.5x7 sheet the default; from v1 only the printer calibration carries over.
+  var PREFS_KEY = 'srfsticker.sheet.v2', OLD_PREFS_KEY = 'srfsticker.sheet';
+  var PREF_FIELDS = { w: widthEl, h: heightEl, gap: gapEl, dx: dxEl, dy: dyEl, margin: marginEl };
   function savePrefs() {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ preset: presetEl.value, w: widthEl.value, h: heightEl.value, gap: gapEl.value, dx: dxEl.value, dy: dyEl.value })); } catch (e) {}
+    var p = { preset: presetEl.value };
+    Object.keys(PREF_FIELDS).forEach(function (k) { p[k] = PREF_FIELDS[k].value; });
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) {}
   }
   function loadPrefs() {
     try {
       var p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
-      if (!p) return;
-      presetEl.value = presetById(p.preset).id;
-      ['w', 'h', 'gap', 'dx', 'dy'].forEach(function (k, i) { if (p[k] != null) [widthEl, heightEl, gapEl, dxEl, dyEl][i].value = p[k]; });
+      if (!p) {
+        var old = JSON.parse(localStorage.getItem(OLD_PREFS_KEY) || 'null');
+        p = old ? { dx: old.dx, dy: old.dy } : {};
+      }
+      if (p.preset) presetEl.value = presetById(p.preset).id;
+      Object.keys(PREF_FIELDS).forEach(function (k) { if (p[k] != null) PREF_FIELDS[k].value = p[k]; });
     } catch (e) {}
   }
 
@@ -275,10 +296,10 @@
     var c = current();
     issuedEl.disabled = expiresEl.disabled = c.dates.manual;
     nameEl.disabled = !c.name;
-    previewEl.innerHTML = stickerSvg(c, c.W, c.H);
+    previewEl.innerHTML = stickerSvg(c);
     var g = sheetLayout(c), px = pngPx(c.W, c.H), isPreset = presetEl.value !== 'custom';
     gapEl.disabled = isPreset;
-    document.getElementById('sizeInfo').textContent = 'גודל הדפסה: ' + cmText(c.W) + ' × ' + cmText(c.H) + ' ס״מ';
+    document.getElementById('sizeInfo').textContent = 'גודל הדפסה: ' + cmText(c.W) + ' × ' + cmText(c.H) + ' ס״מ' + (c.M ? ' · שוליים פנימיים ' + n2(c.M) + ' מ״מ (הקו המקווקו = קצה המדבקה)' : '');
     document.getElementById('pngInfo').textContent = px[0] + '×' + px[1] + ' פיקסלים';
     document.getElementById('sheetInfo').textContent = g.n + ' בדף, ' + g.cols + '×' + g.rows + (g.landscape ? ', דף לרוחב' : '') + (isPreset ? ', לפי מידות הדף שנבחר' : ', עם קו חיתוך מקווקו');
     var start = Math.min(g.n, Math.max(1, parseInt(startEl.value, 10) || 1));
@@ -312,7 +333,9 @@
       cv.width = px[0]; cv.height = px[1];
       var x = cv.getContext('2d');
       x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-      stickerItems(c, c.W, c.H).forEach(function (it) {
+      x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
+      x.translate(c.M * S, c.M * S);
+      stickerItems(c, c.W - 2 * c.M, c.H - 2 * c.M).forEach(function (it) {
         if (it.t === 'rect') { x.fillStyle = it.fill; x.fillRect(it.x * S, it.y * S, it.w * S, it.h * S); }
         else if (it.t === 'frame') { x.strokeStyle = '#000'; x.lineWidth = it.lw * S; x.strokeRect(it.x * S, it.y * S, it.w * S, it.h * S); }
         else if (it.t === 'logo') { x.drawImage(logo, it.x * S, it.y * S, it.w * S, it.h * S); }
@@ -377,6 +400,7 @@
     o.value = p.id; o.textContent = p.label;
     presetEl.appendChild(o);
   });
+  presetEl.value = '105x70';
   loadPrefs();
   // Picking a label sheet sets its size; editing the size by hand switches back to a custom layout.
   presetEl.addEventListener('change', function () {
@@ -385,11 +409,11 @@
     render();
   });
   [widthEl, heightEl].forEach(function (el) { el.addEventListener('input', function () { presetEl.value = 'custom'; }); });
-  [nameEl, issuedEl, expiresEl, widthEl, heightEl, gapEl, startEl, dxEl, dyEl].forEach(function (el) { el.addEventListener('input', render); });
+  [nameEl, issuedEl, expiresEl, widthEl, heightEl, gapEl, startEl, dxEl, dyEl, marginEl].forEach(function (el) { el.addEventListener('input', render); });
   [nameModeEl, roleEl, dateModeEl].forEach(function (el) { el.addEventListener('change', render); });
   issuedEl.addEventListener('input', function () { expiresEl.min = issuedEl.value; });
   // Snap out-of-range sizes back into range once the user leaves the field.
-  [[widthEl, 8, 3, 20], [heightEl, 5, 3, 20], [gapEl, 6, 0, 20], [dxEl, 0, -10, 10], [dyEl, 0, -10, 10]].forEach(function (a) {
+  [[widthEl, 10.5, 3, 20], [heightEl, 7, 3, 20], [gapEl, 6, 0, 20], [dxEl, 0, -10, 10], [dyEl, 0, -10, 10], [marginEl, 4, 0, 15]].forEach(function (a) {
     a[0].addEventListener('change', function () { a[0].value = num(a[0], a[1], a[2], a[3]); render(); });
   });
   document.getElementById('pngBtn').addEventListener('click', download);
