@@ -206,10 +206,10 @@
     return isNaN(v) ? def : Math.min(max, Math.max(min, v));
   }
 
+  // Default validity: the current calendar month (day 0 of next month = last day of this one).
   var today = new Date();
-  var nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-  issuedEl.value = isoDate(today);
-  expiresEl.value = isoDate(nextYear);
+  issuedEl.value = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  expiresEl.value = isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
   expiresEl.min = issuedEl.value;
 
   function current() {
